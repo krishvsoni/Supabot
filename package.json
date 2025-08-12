@@ -6,10 +6,25 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test-setup": "node scripts/test-setup.mjs",
+    "summary": "node scripts/summary.mjs",
+    "benchmark": "node scripts/benchmark.mjs",
+    "benchmark:quick": "node scripts/benchmark.mjs 5",
+    "benchmark:standard": "node scripts/benchmark.mjs 15",
+    "benchmark:comprehensive": "node scripts/benchmark.mjs 30"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.30.0",
+    "@langchain/cohere": "^0.3.4",
+    "@langchain/community": "^0.3.50",
+    "@langchain/groq": "^0.2.3",
+    "@langchain/openai": "^0.6.7",
+    "@supabase/supabase-js": "^2.54.0",
+    "cohere-ai": "^7.18.0",
+    "dotenv": "^17.2.1",
+    "groq-sdk": "^0.30.0",
+    "langchain": "^0.3.30",
     "next": "15.4.6",
     "react": "19.1.0",
     "react-dom": "19.1.0"
