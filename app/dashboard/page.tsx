@@ -44,7 +44,6 @@ export default async function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Chat Section */}
           <div className="space-y-6">
             <div className="text-center lg:text-left">
               <h1 className="text-2xl font-bold text-gray-900 mb-2">AI Documentation Assistant</h1>
@@ -55,7 +54,6 @@ export default async function Dashboard() {
             <SimpleChatbot />
           </div>
 
-          {/* Evaluation Section */}
           <div className="space-y-6">
             <div className="text-center lg:text-left">
               <h1 className="text-2xl font-bold text-gray-900 mb-2">LLM Evaluation & Benchmarking</h1>
@@ -67,7 +65,6 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        {/* Feature Cards */}
         <div className="mt-12 grid md:grid-cols-3 gap-6">
           <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -100,7 +97,6 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Stats */}
         <div className="mt-12 bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

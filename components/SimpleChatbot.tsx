@@ -87,7 +87,6 @@ export default function SimpleChatbot() {
 
   return (
     <div className="max-w-4xl mx-auto h-[600px] flex flex-col bg-white rounded-lg border border-gray-200 shadow-sm">
-      {/* Header */}
       <div className="border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -114,7 +113,6 @@ export default function SimpleChatbot() {
         </div>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
@@ -172,7 +170,6 @@ export default function SimpleChatbot() {
         )}
       </div>
 
-      {/* Input */}
       <div className="border-t border-gray-200 p-4">
         <div className="flex space-x-3">
           <textarea

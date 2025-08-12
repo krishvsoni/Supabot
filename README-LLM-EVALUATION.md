@@ -123,7 +123,7 @@ npm run benchmark:comprehensive
 npm run benchmark 50
 ```
 
-## 📊 Dashboard Features
+##  Dashboard Features
 
 ### Overview Tab
 - **Provider Stats**: Performance metrics for each LLM provider
@@ -146,7 +146,7 @@ npm run benchmark 50
 - **Context-Aware**: Include relevant documentation context
 - **Performance Tracking**: Monitor chat response quality
 
-## 📈 Evaluation Metrics
+##  Evaluation Metrics
 
 The system tracks multiple quality metrics:
 
@@ -157,7 +157,7 @@ The system tracks multiple quality metrics:
 - **Coherence**: Logical flow and structure
 - **Semantic Similarity**: Relevance to the question
 
-## 🗄️ Database Schema
+##  Database Schema
 
 The system creates these tables in Supabase:
 
@@ -166,7 +166,7 @@ The system creates these tables in Supabase:
 - `llm_provider_stats`: Aggregated statistics view
 - `recent_evaluations`: Recent evaluation results view
 
-## 🎯 Use Cases
+##  Use Cases
 
 1. **Provider Selection**: Determine which LLM works best for your use case
 2. **Cost Optimization**: Find the most cost-effective provider
@@ -174,7 +174,7 @@ The system creates these tables in Supabase:
 4. **Performance Benchmarking**: Compare inference speeds
 5. **A/B Testing**: Test different prompts and configurations
 
-## 🔧 Architecture
+##  Architecture
 
 ```
 client/
@@ -188,7 +188,7 @@ client/
 └── lib/database-schema.sql        # Database setup
 ```
 
-## 🚨 Troubleshooting
+##  Troubleshooting
 
 ### Environment Variables Not Loading
 ```bash
@@ -211,7 +211,7 @@ npm run test-setup
 - Use the CLI tools with delays between requests
 - Monitor provider dashboards for usage
 
-## 📚 Next Steps
+##  Next Steps
 
 1. **Run Initial Benchmark**: `npm run benchmark:quick`
 2. **Explore Dashboard**: Visit `/dashboard` to see results
@@ -219,7 +219,7 @@ npm run test-setup
 4. **Setup Monitoring**: Track performance over time
 5. **Optimize Costs**: Identify the most cost-effective providers
 
-## 🎉 You're Ready!
+## You're Ready!
 
 Your LLM evaluation system is now set up and ready to help you find the best free LLM providers for your Supabase documentation chatbot. Start with a quick benchmark and explore the results in the dashboard!
 

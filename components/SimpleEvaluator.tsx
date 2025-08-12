@@ -96,7 +96,6 @@ export default function SimpleEvaluator() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Single Question Evaluation */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Single Question Evaluation</h2>
         <p className="text-sm text-gray-600 mb-4">
@@ -142,7 +141,6 @@ export default function SimpleEvaluator() {
           </button>
         </div>
 
-        {/* Results */}
         {results.length > 0 && (
           <div className="mt-6 space-y-4">
             <h3 className="text-md font-semibold text-gray-900">
@@ -173,7 +171,6 @@ export default function SimpleEvaluator() {
         )}
       </div>
 
-      {/* Benchmark Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Benchmark Evaluation</h2>
         <p className="text-sm text-gray-600 mb-6">

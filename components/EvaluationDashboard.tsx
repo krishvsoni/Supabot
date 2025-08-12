@@ -138,7 +138,6 @@ export default function EvaluationDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Navigation Tabs */}
       <div className="mb-8">
         <nav className="flex space-x-8">
           {[
@@ -163,10 +162,9 @@ export default function EvaluationDashboard() {
         </nav>
       </div>
 
-      {/* Overview Tab */}
+      
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="flex items-center">
@@ -227,7 +225,6 @@ export default function EvaluationDashboard() {
             </div>
           </div>
 
-          {/* Provider Performance Table */}
           <div className="bg-white rounded-lg border border-gray-200">
             <div className="border-b border-gray-200 px-6 py-4">
               <h2 className="text-lg font-semibold text-gray-900">Provider Performance</h2>
@@ -291,7 +288,6 @@ export default function EvaluationDashboard() {
         </div>
       )}
 
-      {/* Benchmark Tab */}
       {activeTab === 'benchmark' && (
         <div className="space-y-6">
           <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -347,7 +343,6 @@ export default function EvaluationDashboard() {
         </div>
       )}
 
-      {/* Evaluate Tab */}
       {activeTab === 'evaluate' && (
         <div className="space-y-6">
           <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -398,7 +393,6 @@ export default function EvaluationDashboard() {
         </div>
       )}
 
-      {/* Chat Tab */}
       {activeTab === 'chat' && (
         <div className="space-y-6">
           <div className="bg-white rounded-lg border border-gray-200 p-6">
