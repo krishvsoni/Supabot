@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { Play, Clock, Star, DollarSign, History, Zap } from "lucide-react"
 import LayoutWithSidebar from "@/components/LayoutWithSidebar"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 interface BenchmarkResult {
   provider: string
   displayName: string
@@ -237,8 +239,34 @@ export default function BenchmarkingDashboard() {
                           </span>
                         </div>
                       </div>
-                      <div className="text-sm text-gray-700 bg-white p-4 rounded-2xl border border-gray-200">
-                        {result.response}
+                      <div className="text-sm text-gray-700 bg-white p-4 rounded-2xl border border-gray-200 prose prose-sm max-w-none">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            h1: ({ children }) => <h1 className="text-lg font-bold text-gray-900 mb-2">{children}</h1>,
+                            h2: ({ children }) => <h2 className="text-base font-semibold text-gray-800 mb-2">{children}</h2>,
+                            h3: ({ children }) => <h3 className="text-sm font-medium text-gray-800 mb-1">{children}</h3>,
+                            p: ({ children }) => <p className="text-sm text-gray-700 mb-2">{children}</p>,
+                            ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                            ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                            li: ({ children }) => <li className="text-sm text-gray-700">{children}</li>,
+                            code: ({ children, className }) => {
+                              const isInline = !className;
+                              return isInline ? (
+                                <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono text-gray-800">{children}</code>
+                              ) : (
+                                <pre className="bg-gray-100 p-3 rounded-lg overflow-x-auto">
+                                  <code className="text-xs font-mono text-gray-800">{children}</code>
+                                </pre>
+                              );
+                            },
+                            blockquote: ({ children }) => <blockquote className="border-l-4 border-gray-300 pl-3 italic text-gray-600">{children}</blockquote>,
+                            strong: ({ children }) => <strong className="font-semibold text-gray-800">{children}</strong>,
+                            em: ({ children }) => <em className="italic text-gray-700">{children}</em>,
+                          }}
+                        >
+                          {result.response}
+                        </ReactMarkdown>
                       </div>
                     </div>
                   ))}
