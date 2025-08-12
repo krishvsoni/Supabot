@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { LLMEvaluationService } from '../../../lib/llm-evaluation-v2';
+import { EnhancedLLMEvaluationService } from '../../../lib/llm-evaluation-enhanced';
+import { currentUser } from '@clerk/nextjs/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, useContext = true } = await request.json();
+    const { message, useContext = true, selectedProvider } = await request.json();
     
     if (!message) {
       return NextResponse.json(
@@ -12,17 +13,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const evaluationService = new LLMEvaluationService();
+    // Get user information for logging
+    let user;
+    try {
+      user = await currentUser();
+    } catch (error) {
+      console.log('User not authenticated, proceeding without user ID');
+    }
+
+    const evaluationService = new EnhancedLLMEvaluationService();
     
-    // Use the chatWithBestModel method
-    const result = await evaluationService.chatWithBestModel(message, useContext);
+    // Generate a session ID for this conversation
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Use the enhanced chat service
+    const result = await evaluationService.chatWithProvider({
+      message,
+      useContext,
+      selectedProvider,
+      userId: user?.id,
+      sessionId
+    });
     
     return NextResponse.json({
       success: true,
       response: result.answer,
       model: result.model,
+      provider: result.provider,
       responseTime: result.responseTime,
       context: result.context,
+      contextDocs: result.contextDocs?.length || 0,
+      qualityScore: result.quality_score,
     });
     
   } catch (error) {

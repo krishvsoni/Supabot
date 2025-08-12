@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { LLMEvaluationService } from '../../../lib/llm-evaluation-v2';
+import { EnhancedLLMEvaluationService } from '../../../lib/llm-evaluation-enhanced';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,10 +12,10 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const evaluationService = new LLMEvaluationService();
+    const evaluationService = new EnhancedLLMEvaluationService();
     
     // Evaluate the question across all providers
-    const results = await evaluationService.evaluateQuestion(question, useContext);
+    const results = await evaluationService.evaluateQuestionAcrossProviders(question, useContext);
     
     return NextResponse.json({
       success: true,

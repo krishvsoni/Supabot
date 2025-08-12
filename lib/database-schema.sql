@@ -72,9 +72,66 @@ FROM llm_evaluations
 ORDER BY timestamp DESC
 LIMIT 100;
 
+-- Create semantic search view for documents_text table
+CREATE OR REPLACE VIEW semantic_search_view AS
+SELECT 
+  id,
+  file_path,
+  title,
+  clean_text,
+  word_count,
+  char_count,
+  embedding,
+  CASE 
+    WHEN file_path ILIKE '%/guide/%' THEN 1.5
+    WHEN file_path ILIKE '%/reference/%' THEN 1.2
+    WHEN file_path ILIKE '%/quickstart/%' THEN 1.8
+    ELSE 1.0
+  END as path_boost,
+  CASE
+    WHEN file_path ILIKE '%auth%' THEN 'Authentication'
+    WHEN file_path ILIKE '%database%' THEN 'Database'
+    WHEN file_path ILIKE '%storage%' THEN 'Storage'
+    WHEN file_path ILIKE '%edge-functions%' THEN 'Edge Functions'
+    WHEN file_path ILIKE '%realtime%' THEN 'Realtime'
+    ELSE 'General'
+  END as category
+FROM documents_text
+WHERE clean_text IS NOT NULL 
+  AND char_count > 100;
+
+-- Create table for chat logs to track all conversations
+CREATE TABLE IF NOT EXISTS chat_logs (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(100),
+  session_id VARCHAR(100),
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  model_name VARCHAR(100) NOT NULL,
+  provider VARCHAR(50) NOT NULL,
+  response_time_ms INTEGER NOT NULL,
+  token_count INTEGER NOT NULL,
+  cost_estimate DECIMAL(10, 8) DEFAULT 0,
+  quality_score DECIMAL(5, 2) DEFAULT 0,
+  context_used BOOLEAN DEFAULT false,
+  context_docs_count INTEGER DEFAULT 0,
+  context_preview TEXT,
+  ip_address INET,
+  user_agent TEXT,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for chat logs
+CREATE INDEX IF NOT EXISTS idx_chat_logs_user_id ON chat_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_logs_session_id ON chat_logs(session_id);
+CREATE INDEX IF NOT EXISTS idx_chat_logs_provider ON chat_logs(provider);
+CREATE INDEX IF NOT EXISTS idx_chat_logs_timestamp ON chat_logs(timestamp);
+
 -- RLS policies (adjust based on your auth setup)
 ALTER TABLE llm_evaluations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE benchmark_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_logs ENABLE ROW LEVEL SECURITY;
 
 -- Allow read access to all authenticated users
 CREATE POLICY "Allow read access to evaluations" ON llm_evaluations
