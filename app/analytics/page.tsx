@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import LayoutWithSidebar from "@/components/LayoutWithSidebar"
@@ -76,13 +76,7 @@ export default function AnalyticsDashboard() {
     }
   }, [isLoaded, user, router])
 
-  useEffect(() => {
-    if (user) {
-      fetchAnalytics()
-    }
-  }, [timeRange, user])
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/analytics?timeRange=${timeRange}&detailed=true`)
@@ -95,7 +89,13 @@ export default function AnalyticsDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [timeRange])
+
+  useEffect(() => {
+    if (user) {
+      fetchAnalytics()
+    }
+  }, [timeRange, user, fetchAnalytics])
 
   const getQualityColor = (score: number) => {
     if (score >= 80) return "text-green-600"
@@ -139,7 +139,7 @@ export default function AnalyticsDashboard() {
     )
   }
 
-  // Don't render anything if user is not authenticated (will be redirected by useEffect)
+  
   if (!user) {
     return null
   }
@@ -156,7 +156,7 @@ export default function AnalyticsDashboard() {
             <div className="flex items-center space-x-4">
               <select
                 value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value as any)}
+                onChange={(e) => setTimeRange(e.target.value as "1h" | "24h" | "7d" | "30d" | "all")}
                 className="bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:ring-2 focus:ring-green-500"
               >
                 <option value="1h">Last Hour</option>
@@ -263,7 +263,7 @@ export default function AnalyticsDashboard() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Questions Asked:</span>
                     <span className="font-semibold text-gray-900">
-                      {analytics.totalQuestions || analytics.questionPerformance?.reduce((sum: number, q: any) => sum + q.count, 0) || analytics.totalChats}
+                      {analytics.totalQuestions || analytics.questionPerformance?.reduce((sum: number, q: { count: number }) => sum + q.count, 0) || analytics.totalChats}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -275,7 +275,7 @@ export default function AnalyticsDashboard() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Active Users (Period):</span>
                     <span className="font-semibold text-gray-900">
-                      {analytics.activityOverTime?.reduce((max: number, activity: any) => Math.max(max, activity.uniqueUsers), 0) || 'N/A'}
+                      {analytics.activityOverTime?.reduce((max: number, activity: { uniqueUsers: number }) => Math.max(max, activity.uniqueUsers), 0) || 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -457,7 +457,7 @@ export default function AnalyticsDashboard() {
                 <span className="text-sm text-gray-600">Sort by:</span>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
+                  onChange={(e) => setSortBy(e.target.value as "chats" | "quality" | "speed" | "cost")}
                   className="bg-white border border-gray-300 rounded-xl px-2 py-1 text-sm text-gray-900"
                 >
                   <option value="chats">Total Chats</option>
@@ -796,7 +796,7 @@ export default function AnalyticsDashboard() {
             <div className="text-gray-500">
               <BarChart3 className="w-12 h-12 mx-auto mb-4" />
               <p className="text-lg font-medium text-gray-900 mb-2">No Analytics Data</p>
-              <p className="text-gray-600">There's no analytics data available for the selected time range.</p>
+              <p className="text-gray-600">There&apos;s no analytics data available for the selected time range.</p>
               <button
                 onClick={fetchAnalytics}
                 className="mt-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-xl hover:scale-105 transition-all duration-200 shadow-lg shadow-green-500/25 flex items-center gap-2 mx-auto"

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ChatCohere } from "@langchain/cohere";
 import { ChatGroq } from "@langchain/groq";
 import { ChatOpenAI } from "@langchain/openai";
@@ -171,28 +172,27 @@ export class EnhancedLLMEvaluationService {
       return [];
     }
 
-    console.log('🔍 Searching for query:', query, 'using', supabaseAdmin ? 'admin client' : 'anon client');
+    console.log(' Searching for query:', query, 'using', supabaseAdmin ? 'admin client' : 'anon client');
 
     try {
-      // Test database connection and count
       const { count: totalCount, error: testError } = await dbClient
         .from('documents_text')
         .select('*', { count: 'exact' })
         .limit(1);
         
-      console.log('🧪 Database test - Total docs available:', totalCount || 0);
+      console.log('Database test - Total docs available:', totalCount || 0);
       if (testError) {
-        console.error('🚨 Database connection error:', testError);
+        console.error('Database connection error:', testError);
         return [];
       }
 
       if (!totalCount || totalCount === 0) {
-        console.log('❌ No documents found in database');
+        console.log('No documents found in database');
         return [];
       }
 
       // First try vector similarity search if embeddings are available
-      let { data: vectorResults, error: vectorError } = await dbClient
+      const { data: vectorResults, error: vectorError } = await dbClient
         .rpc('match_documents', {
           query_text: query,
           match_threshold: 0.7,
@@ -1023,10 +1023,6 @@ export class EnhancedLLMEvaluationService {
         '30d': '30 days',
         'all': '100 years'
       };
-
-      const timeCondition = timeRange === 'all' 
-        ? '' 
-        : `WHERE timestamp >= NOW() - INTERVAL '${timeRangeMap[timeRange as keyof typeof timeRangeMap]}'`;
 
       // Get precision data by category (based on context docs)
       const { data: categoryStats, error } = await supabase

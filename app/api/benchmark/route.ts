@@ -3,7 +3,6 @@ import { EnhancedLLMEvaluationService } from '../../../lib/llm-evaluation-enhanc
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
-  const questionCount = parseInt(url.searchParams.get('count') || '10');
   const testQuestion = url.searchParams.get('question') || 'How do I get started with Supabase?';
   
   return runComprehensiveBenchmark(testQuestion);
@@ -20,7 +19,6 @@ export async function POST(request: NextRequest) {
         return evaluateSingleQuestion(body.question, body.useContext);
       }
     } else {
-      const questionCount = body.questionCount || 10;
       return runComprehensiveBenchmark('How do I get started with Supabase?');
     }
   } catch (error) {

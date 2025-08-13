@@ -108,9 +108,15 @@ async function getAdditionalAnalytics(timeRange: string) {
   }
 }
 
-function processQuestionMetrics(logs: any[]) {
+function processQuestionMetrics(logs: Array<{
+  question: string;
+  quality_score?: number;
+  response_time_ms: number;
+  context_used: boolean;
+  provider: string;
+}>) {
   // Group questions by similarity and calculate metrics
-  const questionGroups: { [key: string]: any[] } = {};
+  const questionGroups: { [key: string]: typeof logs } = {};
   
   logs.forEach(log => {
     const questionKey = log.question.substring(0, 50); // Group similar questions
@@ -126,14 +132,17 @@ function processQuestionMetrics(logs: any[]) {
     avgResponseTime: logs.reduce((sum, log) => sum + log.response_time_ms, 0) / logs.length,
     count: logs.length,
     contextUsageRate: logs.filter(log => log.context_used).length / logs.length * 100,
-    providerDistribution: logs.reduce((acc: any, log) => {
+    providerDistribution: logs.reduce((acc: Record<string, number>, log) => {
       acc[log.provider] = (acc[log.provider] || 0) + 1;
       return acc;
     }, {})
   })).sort((a, b) => b.count - a.count).slice(0, 10);
 }
 
-function processUserActivity(activity: any[]) {
+function processUserActivity(activity: Array<{
+  timestamp: string;
+  user_id: string;
+}>) {
   // Group activity by time periods
   const hourlyActivity: { [key: string]: number } = {};
   
@@ -151,7 +160,11 @@ function processUserActivity(activity: any[]) {
   })).sort((a, b) => a.time.localeCompare(b.time));
 }
 
-function calculatePrecisionMetrics(logs: any[]) {
+function calculatePrecisionMetrics(logs: Array<{
+  question: string;
+  quality_score?: number;
+  context_used: boolean;
+}>) {
   const categories = {
     'Authentication': logs.filter(log => log.question.toLowerCase().includes('auth')),
     'Database': logs.filter(log => log.question.toLowerCase().includes('database') || log.question.toLowerCase().includes('sql')),

@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     let user;
     try {
       user = await currentUser();
-    } catch (error) {
+    } catch {
       console.log('User not authenticated, proceeding without user ID');
     }
 

@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { Send, Loader2, MessageCircle, Settings, Trash2, Zap, Scale, Target, Bot, MessageSquare } from "lucide-react"
+import { Send, Loader2, MessageCircle, Settings, Trash2, Zap, Scale, Target, Bot } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 

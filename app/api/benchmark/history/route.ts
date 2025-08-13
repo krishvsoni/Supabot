@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -24,7 +24,7 @@ interface BenchmarkResult {
   costEstimate: number;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     if (!supabase) {
       return getMockHistory();

@@ -25,7 +25,6 @@ interface EvaluationResult {
 
 export default function EvaluationDashboard() {
   const [stats, setStats] = useState<ProviderStats[]>([]);
-  const [loading, setLoading] = useState(false);
   const [benchmarkRunning, setBenchmarkRunning] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
   const [chatResults, setChatResults] = useState<EvaluationResult[]>([]);
@@ -38,7 +37,6 @@ export default function EvaluationDashboard() {
 
   const fetchStats = async () => {
     try {
-      setLoading(true);
       const response = await fetch('/api/benchmark');
       const data = await response.json();
       if (data.success) {
@@ -46,8 +44,6 @@ export default function EvaluationDashboard() {
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
