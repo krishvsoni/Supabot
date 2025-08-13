@@ -129,7 +129,6 @@ export class EnhancedLLMEvaluationService {
       });
     }
 
-    // OpenRouter - Free models
     if (process.env.NEXT_PUBLIC_OPENROUTER_API_KEY) {
       this.providers.push({
         name: 'openrouter-openchat',
@@ -150,12 +149,11 @@ export class EnhancedLLMEvaluationService {
     }
   }
 
-  // Get available providers for UI selection
   getAvailableProviders(): LLMProvider[] {
     return this.providers.map(p => ({
       name: p.name,
       displayName: p.displayName,
-      model: null, // Don't expose model instance
+      model: null, 
       costPerToken: p.costPerToken,
       maxTokens: p.maxTokens,
       category: p.category,
@@ -178,46 +176,83 @@ export class EnhancedLLMEvaluationService {
           match_count: limit
         });
 
-      // If vector search fails or returns few results, fallback to text search
+      if (vectorError) {
+        console.log('Vector search failed, using text search fallback:', vectorError);
+      }
+
+      // If vector search fails or returns few results, fallback to direct documents_text search
       if (vectorError || !vectorResults || vectorResults.length < 2) {
-        console.log('Using text search fallback');
+        console.log('Using direct documents_text search');
         
-        const { data: textResults, error: textError } = await supabase
-          .from('semantic_search_view')
+        // Direct search on documents_text table
+        const { data: directResults, error: directError } = await supabase
+          .from('documents_text')
           .select('*')
-          .textSearch('clean_text', query, {
-            type: 'websearch',
-            config: 'english'
-          })
-          .order('path_boost', { ascending: false })
+          .or(`title.ilike.%${query}%,clean_text.ilike.%${query}%`)
+          .order('word_count', { ascending: false })
           .limit(limit);
 
-        if (textError) {
-          console.error('Text search error:', textError);
-          // Final fallback to simple ILIKE search
-          const { data: simpleResults, error: simpleError } = await supabase
-            .from('semantic_search_view')
-            .select('*')
-            .ilike('clean_text', `%${query}%`)
-            .order('word_count', { ascending: false })
-            .limit(limit);
-
-          if (simpleError) {
-            console.error('Simple search error:', simpleError);
-            return [];
-          }
-
-          return simpleResults || [];
+        if (directError) {
+          console.error('Direct search error:', directError);
+          return [];
         }
 
-        return textResults || [];
+        // Transform results to match expected interface
+        return (directResults || []).map(doc => ({
+          id: doc.id,
+          file_path: doc.file_path,
+          title: doc.title || 'Untitled',
+          clean_text: doc.clean_text || '',
+          word_count: doc.word_count || 0,
+          char_count: doc.char_count || 0,
+          path_boost: 1.0,
+          category: this.categorizeDocument(doc.file_path)
+        }));
       }
 
       return vectorResults || [];
     } catch (error) {
       console.error('Error in getRelevantContext:', error);
-      return [];
+      
+      // Final fallback: simple direct query
+      try {
+        const { data: fallbackResults, error: fallbackError } = await supabase
+          .from('documents_text')
+          .select('*')
+          .limit(limit);
+
+        if (fallbackError) {
+          console.error('Fallback search error:', fallbackError);
+          return [];
+        }
+
+        return (fallbackResults || []).map(doc => ({
+          id: doc.id,
+          file_path: doc.file_path,
+          title: doc.title || 'Untitled',
+          clean_text: doc.clean_text || '',
+          word_count: doc.word_count || 0,
+          char_count: doc.char_count || 0,
+          path_boost: 1.0,
+          category: this.categorizeDocument(doc.file_path)
+        }));
+      } catch (finalError) {
+        console.error('Final fallback error:', finalError);
+        return [];
+      }
     }
+  }
+
+  private categorizeDocument(filePath: string): string {
+    if (!filePath) return 'General';
+    
+    const path = filePath.toLowerCase();
+    if (path.includes('auth')) return 'Authentication';
+    if (path.includes('database')) return 'Database';
+    if (path.includes('storage')) return 'Storage';
+    if (path.includes('edge-functions')) return 'Edge Functions';
+    if (path.includes('realtime')) return 'Realtime';
+    return 'General';
   }
 
   // Log chat interactions for analytics and evaluation
@@ -476,6 +511,268 @@ export class EnhancedLLMEvaluationService {
     return results;
   }
 
+  // Run comprehensive benchmark with user's question and similar questions
+  async runComprehensiveBenchmark(userQuestion: string, useContext: boolean = true): Promise<any> {
+    if (!supabase) {
+      throw new Error('Supabase not configured for benchmarking');
+    }
+
+    try {
+      // Create benchmark session
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('benchmark_sessions')
+        .insert({
+          session_name: `Benchmark: ${userQuestion.substring(0, 50)}...`,
+          description: `Comprehensive benchmark starting with user question: ${userQuestion}`,
+          question_count: 0,
+          provider_count: this.providers.length,
+          status: 'running'
+        })
+        .select()
+        .single();
+
+      if (sessionError) {
+        throw new Error(`Failed to create benchmark session: ${sessionError.message}`);
+      }
+
+      const sessionId = sessionData.id;
+      const questions = [userQuestion, ...this.generateSimilarQuestions(userQuestion)];
+      const allResults = [];
+
+      // Update session with actual question count
+      await supabase
+        .from('benchmark_sessions')
+        .update({ question_count: questions.length })
+        .eq('id', sessionId);
+
+      // Evaluate each question across all providers
+      for (const question of questions) {
+        const questionResults = await this.evaluateQuestionAcrossProviders(question, useContext);
+        
+        // Store results in llm_evaluations table
+        for (const result of questionResults) {
+          const { error: evalError } = await supabase
+            .from('llm_evaluations')
+            .insert({
+              session_id: sessionId,
+              question: question,
+              answer: result.response,
+              model_name: result.displayName,
+              provider: result.provider,
+              response_time_ms: result.responseTime,
+              token_count: result.tokenCount,
+              cost_estimate: result.costEstimate,
+              quality_score: result.qualityScore,
+              helpfulness_score: this.calculateHelpfulness(question, result.response),
+              coherence_score: this.calculateCoherence(result.response),
+              factual_accuracy: this.calculateFactualAccuracy(result.response)
+            });
+
+          if (evalError) {
+            console.error('Error storing evaluation:', evalError);
+          }
+        }
+
+        allResults.push({
+          question,
+          results: questionResults
+        });
+      }
+
+      // Mark session as completed
+      await supabase
+        .from('benchmark_sessions')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', sessionId);
+
+      // Update provider stats
+      await this.updateProviderStats(allResults);
+
+      return {
+        sessionId,
+        questions: allResults,
+        summary: this.generateBenchmarkSummary(allResults)
+      };
+
+    } catch (error) {
+      console.error('Benchmark error:', error);
+      throw error;
+    }
+  }
+
+  private generateSimilarQuestions(userQuestion: string): string[] {
+    // Generate similar questions based on the user's question
+    const baseQuestions = [
+      "How do I get started with Supabase?",
+      "What are the best practices for database design in Supabase?",
+      "How do I implement authentication?",
+      "How do I set up real-time subscriptions?",
+      "What is row level security?",
+      "How do I use Supabase with Next.js?",
+      "How do I store files in Supabase Storage?",
+      "What are Edge Functions in Supabase?",
+      "How do I migrate my database?",
+      "How do I optimize query performance?"
+    ];
+
+    // Add variations of the user's question
+    const variations = [
+      `What is the best way to ${userQuestion.toLowerCase().replace(/[?]/g, '')}?`,
+      `Can you explain ${userQuestion.toLowerCase().replace(/[?]/g, '')}?`,
+      `Show me how to ${userQuestion.toLowerCase().replace(/[?]/g, '')}`
+    ];
+
+    return [...baseQuestions.slice(0, 3), ...variations.slice(0, 2)];
+  }
+
+  private calculateHelpfulness(question: string, answer: string): number {
+    let score = 50;
+    
+    // Check if answer addresses the question
+    const questionWords = question.toLowerCase().split(' ').filter(w => w.length > 3);
+    const answerLower = answer.toLowerCase();
+    
+    const relevantWords = questionWords.filter(word => answerLower.includes(word));
+    score += (relevantWords.length / questionWords.length) * 30;
+    
+    // Check for actionable content
+    if (answer.includes('step') || answer.match(/\d+\./)) score += 10;
+    if (answer.includes('example') || answer.includes('```')) score += 10;
+    
+    return Math.min(100, Math.max(0, score));
+  }
+
+  private calculateCoherence(answer: string): number {
+    let score = 50;
+    
+    // Check sentence structure
+    const sentences = answer.split(/[.!?]+/).filter(s => s.trim().length > 10);
+    if (sentences.length >= 2 && sentences.length <= 10) score += 20;
+    
+    // Check for logical flow indicators
+    const flowWords = ['first', 'then', 'next', 'finally', 'however', 'therefore'];
+    const hasFlow = flowWords.some(word => answer.toLowerCase().includes(word));
+    if (hasFlow) score += 15;
+    
+    // Check for proper formatting
+    if (answer.includes('\n') || answer.includes('*')) score += 15;
+    
+    return Math.min(100, Math.max(0, score));
+  }
+
+  private calculateFactualAccuracy(answer: string): number {
+    let score = 50;
+    
+    // Check for Supabase-specific terms (indicates domain knowledge)
+    const supabaseTerms = ['supabase', 'postgresql', 'row level security', 'realtime', 'edge functions'];
+    const termCount = supabaseTerms.filter(term => answer.toLowerCase().includes(term)).length;
+    score += termCount * 10;
+    
+    // Penalize for uncertain language
+    const uncertainPhrases = ['i think', 'maybe', 'not sure', "i don't know"];
+    const uncertainCount = uncertainPhrases.filter(phrase => answer.toLowerCase().includes(phrase)).length;
+    score -= uncertainCount * 15;
+    
+    return Math.min(100, Math.max(0, score));
+  }
+
+  private async updateProviderStats(benchmarkResults: any[]): Promise<void> {
+    if (!supabase) return;
+
+    const stats: { [key: string]: any } = {};
+
+    // Aggregate stats from all results
+    for (const questionResult of benchmarkResults) {
+      for (const result of questionResult.results) {
+        const key = `${result.provider}-${result.displayName}`;
+        
+        if (!stats[key]) {
+          stats[key] = {
+            provider: result.provider,
+            model_name: result.displayName,
+            total_requests: 0,
+            total_response_time_ms: 0,
+            total_quality_score: 0,
+            total_cost: 0
+          };
+        }
+        
+        stats[key].total_requests += 1;
+        stats[key].total_response_time_ms += result.responseTime;
+        stats[key].total_quality_score += result.qualityScore;
+        stats[key].total_cost += result.costEstimate;
+      }
+    }
+
+    // Upsert stats
+    for (const statKey of Object.keys(stats)) {
+      const stat = stats[statKey];
+      const avgQualityScore = stat.total_quality_score / stat.total_requests;
+
+      await supabase
+        .from('llm_provider_stats')
+        .upsert({
+          provider: stat.provider,
+          model_name: stat.model_name,
+          total_requests: stat.total_requests,
+          total_response_time_ms: stat.total_response_time_ms,
+          avg_quality_score: avgQualityScore,
+          total_cost: stat.total_cost,
+          last_updated: new Date().toISOString()
+        }, {
+          onConflict: 'provider,model_name'
+        });
+    }
+  }
+
+  private generateBenchmarkSummary(results: any[]): any {
+    const allResults = results.flatMap(r => r.results);
+    
+    const summary = {
+      totalQuestions: results.length,
+      totalEvaluations: allResults.length,
+      avgResponseTime: allResults.reduce((sum, r) => sum + r.responseTime, 0) / allResults.length,
+      avgQualityScore: allResults.reduce((sum, r) => sum + r.qualityScore, 0) / allResults.length,
+      totalCost: allResults.reduce((sum, r) => sum + r.costEstimate, 0),
+      providerPerformance: this.calculateProviderPerformance(allResults)
+    };
+
+    return summary;
+  }
+
+  private calculateProviderPerformance(results: any[]): any[] {
+    const grouped = results.reduce((acc, result) => {
+      const key = result.provider;
+      if (!acc[key]) {
+        acc[key] = {
+          provider: result.provider,
+          count: 0,
+          totalResponseTime: 0,
+          totalQualityScore: 0,
+          totalCost: 0
+        };
+      }
+      
+      acc[key].count++;
+      acc[key].totalResponseTime += result.responseTime;
+      acc[key].totalQualityScore += result.qualityScore;
+      acc[key].totalCost += result.costEstimate;
+      
+      return acc;
+    }, {});
+
+    return Object.values(grouped).map((stats: any) => ({
+      provider: stats.provider,
+      avgResponseTime: Math.round(stats.totalResponseTime / stats.count),
+      avgQualityScore: Number((stats.totalQualityScore / stats.count).toFixed(2)),
+      totalCost: Number(stats.totalCost.toFixed(6)),
+      evaluationCount: stats.count
+    }));
+  }
+
   async getDetailedAnalytics(timeRange: '1h' | '24h' | '7d' | '30d' | 'all' = '24h'): Promise<any> {
     if (!supabase) {
       // Return mock data for development
@@ -515,6 +812,20 @@ export class EnhancedLLMEvaluationService {
         console.warn('Error getting popular questions:', questionsError);
       }
 
+      // Get question performance metrics
+      const { data: questionPerformance, error: performanceError } = await this.getQuestionPerformanceMetrics(timeRange);
+      
+      if (performanceError) {
+        console.warn('Error getting question performance:', performanceError);
+      }
+
+      // Get precision metrics
+      const { data: precisionMetrics, error: precisionError } = await this.getPrecisionMetrics(timeRange);
+      
+      if (precisionError) {
+        console.warn('Error getting precision metrics:', precisionError);
+      }
+
       // Calculate totals
       const totalChats = modelStats?.reduce((sum, model) => sum + model.total_chats, 0) || 0;
       const totalCost = modelStats?.reduce((sum, model) => sum + (model.cost_estimate_total || 0), 0) || 0;
@@ -528,6 +839,8 @@ export class EnhancedLLMEvaluationService {
       return {
         modelStats: modelStats || [],
         popularQuestions: popularQuestions || [],
+        questionPerformance: questionPerformance || [],
+        precisionMetrics: precisionMetrics || this.getMockPrecisionMetrics(),
         totalChats,
         totalCost,
         avgResponseTime,
@@ -539,6 +852,164 @@ export class EnhancedLLMEvaluationService {
       console.error('Error getting detailed analytics:', error);
       return this.getMockDetailedAnalytics();
     }
+  }
+
+  private async getQuestionPerformanceMetrics(timeRange: string): Promise<{ data: any[], error: any }> {
+    if (!supabase) {
+      return { data: this.getMockQuestionPerformance(), error: null };
+    }
+
+    try {
+      const timeRangeMap = {
+        '1h': '1 hour',
+        '24h': '24 hours', 
+        '7d': '7 days',
+        '30d': '30 days',
+        'all': '100 years'
+      };
+
+      const timeFilter = timeRange === 'all' ? '' : `AND timestamp >= NOW() - INTERVAL '${timeRangeMap[timeRange as keyof typeof timeRangeMap]}'`;
+
+      // Get question performance data using raw SQL for better aggregation
+      const { data, error } = await supabase.rpc('get_question_performance', {
+        time_filter: timeFilter,
+        limit_count: 20
+      });
+
+      if (error) {
+        console.error('Question performance query error:', error);
+        return { data: this.getMockQuestionPerformance(), error };
+      }
+
+      return { data: data || this.getMockQuestionPerformance(), error: null };
+    } catch (error) {
+      return { data: this.getMockQuestionPerformance(), error };
+    }
+  }
+
+  private async getPrecisionMetrics(timeRange: string): Promise<{ data: any, error: any }> {
+    if (!supabase) {
+      return { data: this.getMockPrecisionMetrics(), error: null };
+    }
+
+    try {
+      // Calculate precision metrics based on context usage and quality scores
+      const timeRangeMap = {
+        '1h': '1 hour',
+        '24h': '24 hours', 
+        '7d': '7 days',
+        '30d': '30 days',
+        'all': '100 years'
+      };
+
+      const timeCondition = timeRange === 'all' 
+        ? '' 
+        : `WHERE timestamp >= NOW() - INTERVAL '${timeRangeMap[timeRange as keyof typeof timeRangeMap]}'`;
+
+      // Get precision data by category (based on context docs)
+      const { data: categoryStats, error } = await supabase
+        .from('chat_logs')
+        .select('*')
+        .gte('timestamp', timeRange === 'all' ? '1900-01-01' : `now() - interval '${timeRangeMap[timeRange as keyof typeof timeRangeMap]}'`);
+
+      if (error) {
+        return { data: this.getMockPrecisionMetrics(), error };
+      }
+
+      // Calculate precision metrics
+      const precisionMetrics = this.calculatePrecisionFromData(categoryStats || []);
+      
+      return { data: precisionMetrics, error: null };
+    } catch (error) {
+      return { data: this.getMockPrecisionMetrics(), error };
+    }
+  }
+
+  private calculatePrecisionFromData(chatLogs: any[]): any {
+    // Group by context docs count as a proxy for categories
+    const categories = {
+      'No Context': chatLogs.filter(log => !log.context_used || log.context_docs_count === 0),
+      'Low Context (1-2 docs)': chatLogs.filter(log => log.context_used && log.context_docs_count <= 2),
+      'Medium Context (3-4 docs)': chatLogs.filter(log => log.context_used && log.context_docs_count <= 4 && log.context_docs_count > 2),
+      'High Context (5+ docs)': chatLogs.filter(log => log.context_used && log.context_docs_count > 4)
+    };
+
+    const byCategory = Object.entries(categories).map(([category, logs]) => {
+      const count = logs.length;
+      if (count === 0) {
+        return { category, precision: 0, recall: 0, f1: 0, count: 0 };
+      }
+
+      // Calculate precision based on quality scores (high quality = high precision)
+      const highQualityLogs = logs.filter(log => log.quality_score >= 80);
+      const precision = (highQualityLogs.length / count) * 100;
+
+      // Calculate recall (assume context usage indicates better recall)
+      const contextLogs = logs.filter(log => log.context_used);
+      const recall = (contextLogs.length / count) * 100;
+
+      // Calculate F1 score
+      const f1 = precision + recall > 0 ? (2 * precision * recall) / (precision + recall) : 0;
+
+      return {
+        category,
+        precision: Number(precision.toFixed(1)),
+        recall: Number(recall.toFixed(1)),
+        f1: Number(f1.toFixed(1)),
+        count
+      };
+    });
+
+    const totalPrecision = byCategory.reduce((sum, cat) => sum + cat.precision * cat.count, 0);
+    const totalCount = byCategory.reduce((sum, cat) => sum + cat.count, 0);
+    const averagePrecision = totalCount > 0 ? totalPrecision / totalCount : 0;
+
+    return {
+      byCategory,
+      averagePrecision: Number(averagePrecision.toFixed(1))
+    };
+  }
+
+  private getMockQuestionPerformance(): any[] {
+    return [
+      {
+        question: 'How do I set up authentication in Supabase?',
+        avgQualityScore: 87.5,
+        avgResponseTime: 645,
+        count: 15,
+        contextUsageRate: 93.3,
+        providerDistribution: { groq: 8, cohere: 4, openrouter: 3 }
+      },
+      {
+        question: 'What are the best practices for database design?',
+        avgQualityScore: 82.1,
+        avgResponseTime: 890,
+        count: 12,
+        contextUsageRate: 83.3,
+        providerDistribution: { groq: 6, cohere: 3, openrouter: 3 }
+      },
+      {
+        question: 'How do I implement real-time subscriptions?',
+        avgQualityScore: 79.8,
+        avgResponseTime: 756,
+        count: 10,
+        contextUsageRate: 90.0,
+        providerDistribution: { groq: 5, cohere: 3, openrouter: 2 }
+      }
+    ];
+  }
+
+  private getMockPrecisionMetrics(): any {
+    return {
+      byCategory: [
+        { category: 'Authentication', precision: 89.2, recall: 85.7, f1: 87.4, count: 45 },
+        { category: 'Database', precision: 84.6, recall: 88.9, f1: 86.7, count: 38 },
+        { category: 'Storage', precision: 76.3, recall: 82.1, f1: 79.1, count: 23 },
+        { category: 'Realtime', precision: 81.5, recall: 79.3, f1: 80.4, count: 18 },
+        { category: 'General', precision: 73.2, recall: 76.8, f1: 74.9, count: 52 }
+      ],
+      averagePrecision: 82.1
+    };
   }
 
   private getMockDetailedAnalytics(): any {

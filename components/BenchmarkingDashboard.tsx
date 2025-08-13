@@ -52,12 +52,23 @@ export default function BenchmarkingDashboard() {
       const response = await fetch("/api/benchmark", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: testQuestion }),
+        body: JSON.stringify({ 
+          question: testQuestion,
+          comprehensive: true,
+          useContext: true
+        }),
       })
 
       const data = await response.json()
       if (data.success) {
-        setTestResults(data.results)
+        // Show summary and first question results
+        if (data.questions && data.questions.length > 0) {
+          setTestResults(data.questions[0].results)
+        }
+        
+        // Display summary
+        alert(`Comprehensive benchmark completed!\n\nSummary:\n- Questions tested: ${data.summary?.totalQuestions || 'N/A'}\n- Total evaluations: ${data.summary?.totalEvaluations || 'N/A'}\n- Average response time: ${data.summary?.avgResponseTime ? Math.round(data.summary.avgResponseTime) + 'ms' : 'N/A'}\n- Average quality score: ${data.summary?.avgQualityScore ? data.summary.avgQualityScore.toFixed(1) : 'N/A'}`)
+        
         fetchTestHistory() // Refresh history
       } else {
         alert(`Benchmark failed: ${data.error}`)

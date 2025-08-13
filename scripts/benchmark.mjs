@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 import { config } from 'dotenv';
 
-// Load environment variables
 config();
 
-// Import the evaluation service (we'll use a simple dynamic import)
 async function main() {
   const args = process.argv.slice(2);
   const questionCount = parseInt(args[0]) || 10;
