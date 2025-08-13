@@ -25,7 +25,7 @@ export default async function Home() {
                 </svg>
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                Supabase AI Docs
+                supabot
               </span>
             </div>
             <div className="flex items-center space-x-3">
@@ -353,7 +353,7 @@ export default async function Home() {
                 </svg>
               </div>
               <span className="text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                Supabase AI Docs
+                Supabot
               </span>
             </div>
             <p className="text-gray-600 font-mono">Built with love</p>

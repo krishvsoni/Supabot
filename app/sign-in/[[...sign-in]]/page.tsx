@@ -9,7 +9,7 @@ export default function SignInPage() {
             Welcome Back
           </h1>
           <p className="text-gray-600">
-            Sign in to access Supabase AI Docs
+            Sign in to access supabot
           </p>
         </div>
         <SignIn />

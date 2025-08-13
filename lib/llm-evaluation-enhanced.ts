@@ -57,8 +57,10 @@ export interface ChatResponse {
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || '';
 
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+const supabaseAdmin = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
 export class EnhancedLLMEvaluationService {
   private providers: LLMProvider[] = [];
@@ -162,14 +164,35 @@ export class EnhancedLLMEvaluationService {
   }
 
   async getRelevantContext(query: string, limit: number = 5): Promise<DocumentData[]> {
-    if (!supabase) {
+    const dbClient = supabaseAdmin || supabase;
+    
+    if (!dbClient) {
       console.warn('Supabase not configured');
       return [];
     }
 
+    console.log('🔍 Searching for query:', query, 'using', supabaseAdmin ? 'admin client' : 'anon client');
+
     try {
+      // Test database connection and count
+      const { count: totalCount, error: testError } = await dbClient
+        .from('documents_text')
+        .select('*', { count: 'exact' })
+        .limit(1);
+        
+      console.log('🧪 Database test - Total docs available:', totalCount || 0);
+      if (testError) {
+        console.error('🚨 Database connection error:', testError);
+        return [];
+      }
+
+      if (!totalCount || totalCount === 0) {
+        console.log('❌ No documents found in database');
+        return [];
+      }
+
       // First try vector similarity search if embeddings are available
-      let { data: vectorResults, error: vectorError } = await supabase
+      let { data: vectorResults, error: vectorError } = await dbClient
         .rpc('match_documents', {
           query_text: query,
           match_threshold: 0.7,
@@ -182,15 +205,102 @@ export class EnhancedLLMEvaluationService {
 
       // If vector search fails or returns few results, fallback to direct documents_text search
       if (vectorError || !vectorResults || vectorResults.length < 2) {
-        console.log('Using direct documents_text search');
+        console.log('Using direct documents_text search for query:', query);
         
-        // Direct search on documents_text table
-        const { data: directResults, error: directError } = await supabase
-          .from('documents_text')
-          .select('*')
-          .or(`title.ilike.%${query}%,clean_text.ilike.%${query}%`)
-          .order('word_count', { ascending: false })
-          .limit(limit);
+        // Create broader search terms from the query
+        const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 2);
+        console.log('Search terms:', searchTerms);
+        
+        // Try multiple search strategies with improved ranking
+        let directResults = null;
+        let directError = null;
+
+        // Strategy 1: Look for specific chatbot/pipeline content first
+        if (query.toLowerCase().includes('chatbot') || query.toLowerCase().includes('supabot') || query.toLowerCase().includes('built')) {
+          console.log('Searching for chatbot-specific content...');
+          ({ data: directResults, error: directError } = await dbClient
+            .from('documents_text')
+            .select('*')
+            .or(`file_path.ilike.%chatbot%,file_path.ilike.%supabot%,title.ilike.%chatbot%,title.ilike.%supabot%`)
+            .limit(limit));
+        }
+
+        // Strategy 2: Search with better ranking (prioritize non-CLI docs)
+        if (!directResults || directResults.length === 0) {
+          console.log('Searching with improved ranking...');
+          ({ data: directResults, error: directError } = await dbClient
+            .from('documents_text')
+            .select('*')
+            .or(`title.ilike.%${query}%,clean_text.ilike.%${query}%`)
+            .not('file_path', 'like', '%cli%')  // Exclude CLI docs initially
+            .order('word_count', { ascending: false })
+            .limit(limit));
+        }
+
+        // Strategy 3: Try individual search terms with diversity
+        if (!directResults || directResults.length === 0) {
+          console.log('Trying individual search terms with diversity...');
+          const allResults = [];
+          
+          for (const term of searchTerms.slice(0, 3)) { // Limit to first 3 terms
+            const { data: termResults } = await dbClient
+              .from('documents_text')
+              .select('*')
+              .or(`title.ilike.%${term}%,clean_text.ilike.%${term}%`)
+              .not('file_path', 'like', '%cli%')  // Prefer non-CLI docs
+              .order('word_count', { ascending: false })
+              .limit(3);
+            
+            if (termResults && termResults.length > 0) {
+              allResults.push(...termResults.slice(0, 2)); // Take top 2 per term
+              console.log(`Found ${termResults.length} results for term: ${term}`);
+            }
+          }
+          
+          // Remove duplicates and take top results
+          const uniqueResults = allResults.filter((result, index, self) => 
+            index === self.findIndex(r => r.id === result.id)
+          );
+          directResults = uniqueResults.slice(0, limit);
+        }
+
+        // Strategy 4: If still no results, include CLI docs as fallback
+        if (!directResults || directResults.length === 0) {
+          console.log('Fallback: including CLI documentation...');
+          for (const term of searchTerms.slice(0, 2)) {
+            ({ data: directResults, error: directError } = await dbClient
+              .from('documents_text')
+              .select('*')
+              .or(`title.ilike.%${term}%,clean_text.ilike.%${term}%`)
+              .order('word_count', { ascending: false })
+              .limit(limit));
+            
+            if (directResults && directResults.length > 0) {
+              console.log(`Found ${directResults.length} results for term: ${term} (including CLI)`);
+              break;
+            }
+          }
+        }
+
+        // Strategy 5: Last resort - get diverse sample documents
+        if (!directResults || directResults.length === 0) {
+          console.log('Getting diverse sample documents...');
+          ({ data: directResults, error: directError } = await dbClient
+            .from('documents_text')
+            .select('*')
+            .not('file_path', 'like', '%cli%')
+            .order('word_count', { ascending: false })
+            .limit(limit));
+        }
+
+        console.log('Direct search results count:', directResults?.length || 0);
+        if (directResults && directResults.length > 0) {
+          console.log('Sample result:', {
+            title: directResults[0].title,
+            contentLength: directResults[0].clean_text?.length || 0,
+            filePath: directResults[0].file_path
+          });
+        }
 
         if (directError) {
           console.error('Direct search error:', directError);
@@ -216,7 +326,7 @@ export class EnhancedLLMEvaluationService {
       
       // Final fallback: simple direct query
       try {
-        const { data: fallbackResults, error: fallbackError } = await supabase
+        const { data: fallbackResults, error: fallbackError } = await dbClient
           .from('documents_text')
           .select('*')
           .limit(limit);
@@ -257,10 +367,11 @@ export class EnhancedLLMEvaluationService {
 
   // Log chat interactions for analytics and evaluation
   async logChatInteraction(request: ChatRequest, response: ChatResponse): Promise<void> {
-    if (!supabase) return;
+    const logClient = supabaseAdmin || supabase;
+    if (!logClient) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await logClient
         .from('chat_logs')
         .insert({
           user_id: request.userId,
@@ -291,22 +402,33 @@ export class EnhancedLLMEvaluationService {
   async chatWithProvider(request: ChatRequest): Promise<ChatResponse> {
     const { message, useContext = true, selectedProvider } = request;
 
+    console.log('💬 Chat request:', { message, useContext, selectedProvider });
+
     // Get relevant context if requested
     let contextText = '';
     let contextDocs: DocumentData[] = [];
     
     if (useContext) {
+      console.log('🔍 Getting relevant context for message:', message);
       contextDocs = await this.getRelevantContext(message, 5);
+      console.log('📄 Found context docs:', contextDocs.length);
+      
       if (contextDocs.length > 0) {
         contextText = contextDocs.map(doc => 
-          `**${doc.title}** (${doc.category})\n${doc.clean_text.substring(0, 400)}...`
+          `**${doc.title}** (${doc.category})\n${doc.clean_text.substring(0, 500)}...`
         ).join('\n\n');
+        console.log('📝 Context text length:', contextText.length);
+        console.log('📄 Context preview:', contextText.substring(0, 200) + '...');
+      } else {
+        console.log('⚠️ No context documents found');
       }
     }
 
     const enhancedMessage = contextText 
-      ? `Based on this Supabase documentation:\n\n${contextText}\n\nUser Question: ${message}\n\nPlease provide a helpful answer based on the documentation context. Be specific and include relevant details.`
+      ? `Based on this Supabase documentation:\n\n${contextText}\n\nUser Question: ${message}\n\nPlease provide a helpful answer based ONLY on the documentation context above. If the answer is not in the provided documentation, say "I don't have that information in the provided documentation." Be specific and include relevant details from the documentation.`
       : message;
+
+    console.log('📤 Enhanced message length:', enhancedMessage.length);
 
     // Select provider
     let targetProvider: LLMProvider;
@@ -332,7 +454,7 @@ export class EnhancedLLMEvaluationService {
       const response = await targetProvider.model.invoke([
         { 
           role: "system", 
-          content: "You are a helpful Supabase documentation assistant. Provide clear, accurate, and detailed answers based on the provided context. Format your responses nicely with markdown when appropriate." 
+          content: "You are a Supabase documentation assistant. You MUST base your answers ONLY on the provided documentation context. If the answer is not in the provided documentation, clearly state that you don't have that information in the documentation. Do not use external knowledge. Format your responses with markdown when appropriate and cite specific sections from the documentation when possible." 
         },
         { role: "user", content: enhancedMessage }
       ]);

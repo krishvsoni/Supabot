@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { Send, Loader2, MessageCircle, Settings, Trash2, Zap, Scale, Target, Bot } from "lucide-react"
+import { Send, Loader2, MessageCircle, Settings, Trash2, Zap, Scale, Target, Bot, MessageSquare } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -35,10 +35,19 @@ export default function SimpleChatbot() {
   const [availableProviders, setAvailableProviders] = useState<LLMProvider[]>([])
   const [showProviderDetails, setShowProviderDetails] = useState(false)
 
+  console.log('Component render - Messages count:', messages.length) // Debug log
+  console.log('Messages array:', messages) // Debug log
+
+  
   useEffect(() => {
     // Fetch available providers
     fetchAvailableProviders()
   }, [])
+
+  // Debug log for messages
+  useEffect(() => {
+    console.log('Messages updated:', messages.length, messages)
+  }, [messages])
 
   const fetchAvailableProviders = async () => {
     try {
@@ -81,6 +90,9 @@ export default function SimpleChatbot() {
 
       const data = await response.json()
 
+      console.log('API Response:', data) // Debug log
+      console.log('Current messages before update:', messages.length) // Debug log
+
       if (data.success) {
         const assistantMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
@@ -95,7 +107,15 @@ export default function SimpleChatbot() {
           qualityScore: data.qualityScore,
         }
 
-        setMessages((prev) => [...prev, assistantMessage])
+        console.log('Assistant Message:', assistantMessage) // Debug log
+        console.log('Response content:', data.response) // Debug log
+        
+        setMessages((prev) => {
+          console.log('Previous messages:', prev.length) // Debug log
+          const newMessages = [...prev, assistantMessage]
+          console.log('New messages count:', newMessages.length) // Debug log
+          return newMessages
+        })
       } else {
         throw new Error(data.error || "Failed to get response")
       }
@@ -158,6 +178,7 @@ export default function SimpleChatbot() {
             <p className="text-gray-600">Enhanced with semantic search & multi-provider support</p>
           </div>
           <div className="flex items-center space-x-4">
+            
             <button
               onClick={() => setShowProviderDetails(!showProviderDetails)}
               className="text-sm text-green-600 hover:text-green-700 px-3 py-2 rounded-xl border border-green-200 hover:bg-green-50 transition-all duration-200 flex items-center gap-2"
@@ -227,6 +248,11 @@ export default function SimpleChatbot() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {/* Debug info */}
+        <div style={{position: 'fixed', top: '10px', right: '10px', background: 'red', color: 'white', padding: '5px', zIndex: 9999}}>
+          Messages: {messages.length}
+        </div>
+        
         {messages.length === 0 ? (
           <div className="text-center text-gray-600 py-8">
             <div className="mb-4">

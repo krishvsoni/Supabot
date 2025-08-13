@@ -9,7 +9,7 @@ export default function SignUpPage() {
             Get Started
           </h1>
           <p className="text-gray-600">
-            Create your account for Supabase AI Docs
+            Create your account for supabot
           </p>
         </div>
         <SignUp />
