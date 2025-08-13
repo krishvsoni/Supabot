@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useUser } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
 import LayoutWithSidebar from "@/components/LayoutWithSidebar"
 import { MessageCircle, Zap, BarChart3, DollarSign, RefreshCw, TrendingUp } from "lucide-react"
 
@@ -29,15 +31,26 @@ interface Analytics {
 }
 
 export default function AnalyticsDashboard() {
+  const { user, isLoaded } = useUser()
+  const router = useRouter()
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [loading, setLoading] = useState(false)
   const [timeRange, setTimeRange] = useState<"1h" | "24h" | "7d" | "30d" | "all">("24h")
   const [activeTab, setActiveTab] = useState("overview")
   const [sortBy, setSortBy] = useState<"chats" | "quality" | "speed" | "cost">("chats")
 
+  // Redirect if not authenticated
   useEffect(() => {
-    fetchAnalytics()
-  }, [timeRange])
+    if (isLoaded && !user) {
+      router.push('/')
+    }
+  }, [isLoaded, user, router])
+
+  useEffect(() => {
+    if (user) {
+      fetchAnalytics()
+    }
+  }, [timeRange, user])
 
   const fetchAnalytics = async () => {
     try {
@@ -87,6 +100,20 @@ export default function AnalyticsDashboard() {
         }
       })
     : []
+
+  // Show loading spinner while authentication is being checked
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      </div>
+    )
+  }
+
+  // Don't render anything if user is not authenticated (will be redirected by useEffect)
+  if (!user) {
+    return null
+  }
 
   return (
     <LayoutWithSidebar>

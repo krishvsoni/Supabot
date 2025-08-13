@@ -11,7 +11,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Check if this is a single question evaluation or a full benchmark
     if (body.question) {
       return evaluateSingleQuestion(body.question, body.useContext);
     } else {

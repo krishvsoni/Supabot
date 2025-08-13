@@ -3,7 +3,6 @@ import { ChatGroq } from "@langchain/groq";
 import { ChatOpenAI } from "@langchain/openai";
 import { createClient } from '@supabase/supabase-js';
 
-// Types for our enhanced evaluation system
 export interface EvaluationMetrics {
   model_name: string;
   provider: string;
@@ -56,7 +55,6 @@ export interface ChatResponse {
   cost_estimate?: number;
 }
 
-// Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
@@ -70,7 +68,6 @@ export class EnhancedLLMEvaluationService {
   }
 
   private initializeProviders() {
-    // Groq - Ultra-fast inference (FREE)
     if (process.env.NEXT_PUBLIC_GROQ_API_KEY) {
       this.providers.push({
         name: 'groq-llama3-70b',

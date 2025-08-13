@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useUser } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
 import { Play, Clock, Star, DollarSign, History, Zap } from "lucide-react"
 import LayoutWithSidebar from "@/components/LayoutWithSidebar"
 import ReactMarkdown from "react-markdown"
@@ -24,15 +26,26 @@ interface BenchmarkTest {
 }
 
 export default function BenchmarkingDashboard() {
+  const { user, isLoaded } = useUser()
+  const router = useRouter()
   const [testQuestion, setTestQuestion] = useState("")
   const [testResults, setTestResults] = useState<BenchmarkResult[]>([])
   const [testHistory, setTestHistory] = useState<BenchmarkTest[]>([])
   const [testLoading, setTestLoading] = useState(false)
   const [selectedTest, setSelectedTest] = useState<string | null>(null)
 
+  // Redirect if not authenticated
   useEffect(() => {
-    fetchTestHistory()
-  }, [])
+    if (isLoaded && !user) {
+      router.push('/')
+    }
+  }, [isLoaded, user, router])
+
+  useEffect(() => {
+    if (user) {
+      fetchTestHistory()
+    }
+  }, [user])
 
   const fetchTestHistory = async () => {
     try {
@@ -109,6 +122,20 @@ export default function BenchmarkingDashboard() {
     setSelectedTest(test.id)
     setTestQuestion(test.question)
     setTestResults(test.results)
+  }
+
+  // Show loading spinner while authentication is being checked
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      </div>
+    )
+  }
+
+  // Don't render anything if user is not authenticated (will be redirected by useEffect)
+  if (!user) {
+    return null
   }
 
   return (

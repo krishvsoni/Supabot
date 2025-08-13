@@ -9,34 +9,34 @@ async function main() {
   const args = process.argv.slice(2);
   const questionCount = parseInt(args[0]) || 10;
   
-  console.log('🚀 Starting LLM Benchmark Evaluation');
-  console.log(`📝 Question Count: ${questionCount}`);
-  console.log('🔗 Available Providers:');
+  console.log('Starting LLM Benchmark Evaluation');
+  console.log(`Question Count: ${questionCount}`);
+  console.log('Available Providers:');
   
   // Check environment variables
   const providers = [];
   if (process.env.NEXT_PUBLIC_GROQ_API_KEY) {
-    providers.push('✅ Groq (Mixtral-8x7B, LLaMA3-70B)');
+    providers.push(' Groq (Mixtral-8x7B, LLaMA3-70B)');
   } else {
-    providers.push('❌ Groq (API key missing)');
+    providers.push(' Groq (API key missing)');
   }
   
   if (process.env.NEXT_PUBLIC_COHERE_API_KEY) {
-    providers.push('✅ Cohere (Command)');
+    providers.push(' Cohere (Command)');
   } else {
-    providers.push('❌ Cohere (API key missing)');
+    providers.push(' Cohere (API key missing)');
   }
   
   if (process.env.NEXT_PUBLIC_OPENROUTER_API_KEY) {
-    providers.push('✅ OpenRouter (OpenChat-7B, MythoMax-L2-13B)');
+    providers.push('OpenRouter (OpenChat-7B, MythoMax-L2-13B)');
   } else {
-    providers.push('❌ OpenRouter (API key missing)');
+    providers.push('OpenRouter (API key missing)');
   }
   
   providers.forEach(provider => console.log(`   ${provider}`));
   console.log('');
   
-  console.log('🔄 Running benchmark via API...');
+  console.log('Running benchmark via API...');
   
   try {
     // Use fetch to call the API since we're in a script context
@@ -50,20 +50,20 @@ async function main() {
     const data = await response.json();
     
     if (data.success) {
-      console.log('\\n📊 Benchmark Results:');
+      console.log('\nBenchmark Results:');
       console.log(`   Total Evaluations: ${data.totalEvaluations}`);
-      console.log('\\n✅ Benchmark completed successfully!');
-      console.log('📊 Results stored in Supabase database');
-      console.log('🌐 View detailed results in the dashboard at /dashboard');
+      console.log('\nBenchmark completed successfully!');
+      console.log('Results stored in Supabase database');
+      console.log('View detailed results in the dashboard at /dashboard');
     } else {
       throw new Error(data.error || 'Benchmark failed');
     }
     
   } catch (error) {
-    console.error('❌ Benchmark failed:', error.message);
-    console.log('\\n💡 Make sure the development server is running:');
+    console.error('Benchmark failed:', error.message);
+    console.log('\nMake sure the development server is running:');
     console.log('   npm run dev');
-    console.log('\\n   Then try the benchmark again.');
+    console.log('\n   Then try the benchmark again.');
     process.exit(1);
   }
 }
