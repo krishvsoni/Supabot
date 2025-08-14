@@ -14,14 +14,21 @@
     "benchmark": "node scripts/benchmark.mjs",
     "benchmark:quick": "node scripts/benchmark.mjs 5",
     "benchmark:standard": "node scripts/benchmark.mjs 15",
-    "benchmark:comprehensive": "node scripts/benchmark.mjs 30"
+    "benchmark:comprehensive": "node scripts/benchmark.mjs 30",
+    "setup-mcp-db": "tsx scripts/setup-mcp-database.ts",
+    "test-mcp": "curl \"http://localhost:3000/api/benchmark/mcp?question=How%20do%20I%20use%20Supabase%20auth?\"",
+    "mcp-analytics": "curl http://localhost:3000/api/analytics/mcp",
+    "mcp-benchmark": "curl -X POST http://localhost:3000/api/benchmark/mcp -H \"Content-Type: application/json\" -d '{\"question\":\"How do I implement row level security?\",\"useContext\":true}'"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.30.0",
     "@langchain/cohere": "^0.3.4",
     "@langchain/community": "^0.3.50",
+    "@langchain/core": "^0.3.70",
     "@langchain/groq": "^0.2.3",
     "@langchain/openai": "^0.6.7",
+    "@smithy/protocol-http": "^5.1.3",
+    "@smithy/signature-v4": "^5.1.3",
     "@supabase/supabase-js": "^2.54.0",
     "@tailwindcss/typography": "^0.5.16",
     "cohere-ai": "^7.18.0",
@@ -44,6 +51,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
     "tailwindcss": "^4",
+    "tsx": "^4.20.4",
     "typescript": "^5"
   }
 }

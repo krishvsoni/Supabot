@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import LayoutWithSidebar from "@/components/LayoutWithSidebar"
-import { MessageCircle, Zap, BarChart3, DollarSign, RefreshCw, TrendingUp } from "lucide-react"
+import { MessageCircle, Zap, BarChart3, DollarSign, RefreshCw, TrendingUp, Layers, ArrowRight } from "lucide-react"
+import Link from "next/link"
 
 interface ModelAnalytics {
   provider: string
@@ -175,6 +176,49 @@ export default function AnalyticsDashboard() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* MCP Architecture Navigation */}
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl border border-indigo-200 p-6 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center space-x-3 mb-2">
+                <Layers className="w-6 h-6 text-indigo-600" />
+                <h2 className="text-xl font-bold text-indigo-900">MCP Architecture</h2>
+                <span className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-full">
+                  NEW
+                </span>
+              </div>
+              <p className="text-indigo-700 mb-4">
+                Enhanced analytics with Model Context Protocol and database monitoring
+              </p>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Link 
+                  href="/analytics/mcp"
+                  className="flex items-center justify-between p-4 bg-white rounded-lg border border-indigo-200 hover:border-indigo-300 transition-colors group"
+                >
+                  <div>
+                    <h3 className="font-semibold text-indigo-900">MCP Analytics</h3>
+                    <p className="text-sm text-indigo-600">Advanced metrics and database monitoring</p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-indigo-400 group-hover:text-indigo-600 transition-colors" />
+                </Link>
+                <Link 
+                  href="/benchmarking/mcp"
+                  className="flex items-center justify-between p-4 bg-white rounded-lg border border-indigo-200 hover:border-indigo-300 transition-colors group"
+                >
+                  <div>
+                    <h3 className="font-semibold text-indigo-900">MCP Benchmarking</h3>
+                    <p className="text-sm text-indigo-600">Standardized testing across all providers</p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-indigo-400 group-hover:text-indigo-600 transition-colors" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-lg">
 
           {/* Tabs */}
           <div className="mt-6 border-b border-gray-200">

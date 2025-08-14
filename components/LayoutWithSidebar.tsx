@@ -21,16 +21,17 @@ export default function LayoutWithSidebar({ children }: LayoutWithSidebarProps) 
       href: "/chat",
       icon: <MessageCircle className="w-5 h-5" />,
     },
+        {
+      name: "Benchmarking",
+      href: "/benchmarking",
+      icon: <Zap className="w-5 h-5" />,
+    },
     {
       name: "Analytics",
       href: "/analytics",
       icon: <BarChart3 className="w-5 h-5" />,
     },
-    {
-      name: "Benchmarking",
-      href: "/benchmarking",
-      icon: <Zap className="w-5 h-5" />,
-    },
+
   ]
 
   return (

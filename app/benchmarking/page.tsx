@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { Play, Clock, Star, DollarSign, History, Zap } from "lucide-react"
+import { Play, Clock, Star, DollarSign, Zap, ArrowRight, Layers } from "lucide-react"
 import LayoutWithSidebar from "@/components/LayoutWithSidebar"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import Link from "next/link"
 interface BenchmarkResult {
   provider: string
   displayName: string
@@ -18,21 +19,12 @@ interface BenchmarkResult {
   costEstimate: number | undefined
 }
 
-interface BenchmarkTest {
-  id: string
-  question: string
-  timestamp: string
-  results: BenchmarkResult[]
-}
-
 export default function BenchmarkingDashboard() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const [testQuestion, setTestQuestion] = useState("")
   const [testResults, setTestResults] = useState<BenchmarkResult[]>([])
-  const [testHistory, setTestHistory] = useState<BenchmarkTest[]>([])
   const [testLoading, setTestLoading] = useState(false)
-  const [selectedTest, setSelectedTest] = useState<string | null>(null)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -40,24 +32,6 @@ export default function BenchmarkingDashboard() {
       router.push('/')
     }
   }, [isLoaded, user, router])
-
-  useEffect(() => {
-    if (user) {
-      fetchTestHistory()
-    }
-  }, [user])
-
-  const fetchTestHistory = async () => {
-    try {
-      const response = await fetch("/api/benchmark/history")
-      const data = await response.json()
-      if (data.success) {
-        setTestHistory(data.history)
-      }
-    } catch (error) {
-      console.error("Error fetching test history:", error)
-    }
-  }
 
   const runBenchmark = async () => {
     if (!testQuestion.trim()) return
@@ -73,7 +47,6 @@ export default function BenchmarkingDashboard() {
       const data = await response.json()
       if (data.success) {
         setTestResults(data.results)
-        fetchTestHistory() // Refresh history
       } else {
         alert(`Benchmark failed: ${data.error}`)
       }
@@ -118,12 +91,6 @@ export default function BenchmarkingDashboard() {
     return `$${cost.toFixed(4)}`
   }
 
-  const loadHistoryTest = (test: BenchmarkTest) => {
-    setSelectedTest(test.id)
-    setTestQuestion(test.question)
-    setTestResults(test.results)
-  }
-
   // Show loading spinner while authentication is being checked
   if (!isLoaded) {
     return (
@@ -139,7 +106,6 @@ export default function BenchmarkingDashboard() {
   }
 
   return (
-    <>
     <LayoutWithSidebar>
     <div className="max-w-7xl mx-auto p-6 space-y-6 bg-white min-h-screen">
       <div className="bg-white rounded-3xl border border-green-200 p-6 shadow-lg">
@@ -157,9 +123,11 @@ export default function BenchmarkingDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+
+      <div className="space-y-6">
         {/* Test Panel */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6">
           {/* Test Input */}
           <div className="bg-white rounded-3xl border border-green-200 p-6 shadow-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -301,71 +269,8 @@ export default function BenchmarkingDashboard() {
             </div>
           )}
         </div>
-
-        {/* Test History Sidebar */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-3xl border border-green-200 p-6 shadow-lg">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <History className="w-5 h-5 text-green-500" />
-              Test History
-            </h2>
-
-            {testHistory.length === 0 ? (
-              <p className="text-gray-500 text-sm">No test history available</p>
-            ) : (
-              <div className="space-y-3">
-                {testHistory.slice(0, 10).map((test) => (
-                  <div
-                    key={test.id}
-                    onClick={() => loadHistoryTest(test)}
-                    className={`p-3 rounded-2xl border cursor-pointer transition-all duration-200 ${
-                      selectedTest === test.id
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-300 hover:border-green-300 bg-gray-50 hover:bg-green-50"
-                    }`}
-                  >
-                    <div className="text-sm font-medium text-gray-900 mb-1 truncate">{test.question}</div>
-                    <div className="text-xs text-gray-500 mb-2">{new Date(test.timestamp).toLocaleDateString()}</div>
-                    <div className="flex justify-between text-xs text-gray-600">
-                      <span>{test.results.length} providers</span>
-                      <span className="text-green-600 font-medium">
-                        {Math.round(test.results.reduce((acc, r) => acc + (r.qualityScore || 0), 0) / test.results.length)}%
-                        avg
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white rounded-3xl border border-green-200 p-6 shadow-lg">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-green-500" />
-              Quick Tests
-            </h2>
-            <div className="space-y-2">
-              {[
-                "How do I set up authentication in Supabase?",
-                "What are the best practices for database design?",
-                "How do I implement real-time subscriptions?",
-                "Explain row level security policies",
-              ].map((question, index) => (
-                <button
-                  key={index}
-                  onClick={() => setTestQuestion(question)}
-                  className="w-full text-left p-3 text-sm text-gray-700 hover:text-gray-900 hover:bg-green-50 rounded-2xl border border-gray-300 hover:border-green-300 transition-all duration-200"
-                >
-                  {question}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
     </LayoutWithSidebar>
-    </>
   )
 }
