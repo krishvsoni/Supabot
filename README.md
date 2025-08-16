@@ -30,3 +30,4 @@ Find the pipeline source code on [GitHub](https://github.com/krishvsoni).
   Integrates semantic search and keyword matching for improved accuracy.
 
 
+### checkout my latest blog for more details : https://medium.com/@krishvsoni/building-an-advanced-documentation-search-system-supabase-web-crawling-with-local-embeddings-and-678cc6cdcef4
