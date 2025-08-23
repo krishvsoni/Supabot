@@ -5,7 +5,7 @@ Supabot transforms raw Supabase documentation into intelligent, contextual AI re
 ## Pipeline Overview
 
 
-Find the pipeline source code on [GitHub](https://github.com/krishvsoni).
+Find the pipeline source code on [GitHub](https://github.com/krishvsoni/embedding-local).
 1. **HTML Scraping**  
     Extracts raw content from Supabase documentation.
 
