@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { BarChart3, TrendingUp, Clock, DollarSign, Star, Users, Database, Activity, AlertTriangle } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { TrendingUp, DollarSign, Star, Users, Database, Activity, AlertTriangle } from "lucide-react"
 
 interface DatabaseTable {
   name: string
@@ -62,12 +62,7 @@ export default function MCPAnalyticsDashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [activeTimeRange, setActiveTimeRange] = useState('24h')
 
-  useEffect(() => {
-    fetchAnalytics()
-    checkDatabaseStatus()
-  }, [activeTimeRange])
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch(`/api/analytics/mcp?timeRange=${activeTimeRange}`)
@@ -80,7 +75,12 @@ export default function MCPAnalyticsDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [activeTimeRange])
+
+  useEffect(() => {
+    fetchAnalytics()
+    checkDatabaseStatus()
+  }, [fetchAnalytics])
 
   const checkDatabaseStatus = async () => {
     try {
@@ -106,6 +106,7 @@ export default function MCPAnalyticsDashboard() {
             lastUpdated: data.lastUpdated || new Date().toISOString()
           })
         } catch (error) {
+          console.error(`Error checking table ${tableName}:`, error)
           tableStatus.push({
             name: tableName,
             rowCount: 0,

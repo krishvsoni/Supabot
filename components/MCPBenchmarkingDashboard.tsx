@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Play, Clock, Star, DollarSign, History, Zap, BarChart3, TrendingUp, Users, CheckCircle, AlertCircle } from "lucide-react"
+import { Play, Clock, Star, DollarSign, History, BarChart3, CheckCircle, AlertCircle } from "lucide-react"
 
 // MCP Response Types
 interface MCPResponse {
@@ -147,15 +147,6 @@ export default function MCPBenchmarkingDashboard() {
     }
   }
 
-  const getCategoryColor = (category: 'fast' | 'balanced' | 'quality') => {
-    switch (category) {
-      case 'fast': return 'bg-green-100 text-green-800'
-      case 'balanced': return 'bg-blue-100 text-blue-800'
-      case 'quality': return 'bg-purple-100 text-purple-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   const getProviderIcon = (provider: string) => {
     switch (provider) {
       case 'groq': return '⚡'
@@ -198,7 +189,7 @@ export default function MCPBenchmarkingDashboard() {
             ].map(({ id, name, icon: Icon }) => (
               <button
                 key={id}
-                onClick={() => setActiveTab(id as any)}
+                onClick={() => setActiveTab(id as 'benchmark' | 'analytics' | 'history')}
                 className={`flex items-center space-x-2 px-4 py-2 border-b-2 font-medium text-sm ${
                   activeTab === id
                     ? 'border-indigo-500 text-indigo-600'

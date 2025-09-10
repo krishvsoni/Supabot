@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ChatCohere } from "@langchain/cohere";
 import { ChatGroq } from "@langchain/groq";
 import { ChatOpenAI } from "@langchain/openai";
@@ -112,7 +111,7 @@ class BaseMCPServer {
 export class CohereMCPServer extends BaseMCPServer implements MCPServer {
   name = 'cohere';
   displayName = 'Cohere Command';
-  category: 'balanced' = 'balanced';
+  category = 'balanced' as const;
   maxTokens = 4096;
   costPerToken = 0.0015;
   

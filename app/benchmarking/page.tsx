@@ -3,11 +3,10 @@
 import { useState, useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { Play, Clock, Star, DollarSign, Zap, ArrowRight, Layers } from "lucide-react"
+import { Play, Clock, Star, DollarSign, Zap } from "lucide-react"
 import LayoutWithSidebar from "@/components/LayoutWithSidebar"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import Link from "next/link"
 interface BenchmarkResult {
   provider: string
   displayName: string

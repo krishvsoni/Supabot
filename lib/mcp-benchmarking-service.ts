@@ -205,7 +205,7 @@ export class MCPBenchmarkingService {
     }
   }
 
-  async getAnalytics(timeRange: '1h' | '24h' | '7d' | '30d' | 'all' = '24h'): Promise<AnalyticsData> {
+  async getAnalytics(): Promise<AnalyticsData> {
     if (!this.dbClient) {
       throw new Error('Database not configured');
     }

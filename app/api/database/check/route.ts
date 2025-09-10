@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
               .limit(1)
               .single();
 
-            if (!dataError && data && (data as any)[col]) {
-              lastUpdated = (data as any)[col];
+            if (!dataError && data && typeof data === 'object' && data !== null && col in data) {
+              lastUpdated = (data as Record<string, unknown>)[col];
               break;
             }
           } catch {

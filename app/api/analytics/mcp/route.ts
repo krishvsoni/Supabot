@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     
     switch (action) {
       case 'analytics':
-        const analytics = await mcpService.getAnalytics(timeRange);
+        const analytics = await mcpService.getAnalytics();
         return NextResponse.json({
           success: true,
           architecture: 'MCP (Model Context Protocol)',
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, ...params } = body;
+    const { action } = body;
     
     const mcpService = new MCPBenchmarkingService();
     
